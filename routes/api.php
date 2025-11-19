@@ -3,7 +3,10 @@
 use App\Http\Controllers\Authentication\AuthController;
 use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
+
 use Illuminate\Http\Request;
+use App\Mail\VerificationCodeMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 
@@ -22,7 +25,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 Route::get('/test', function () {
-    return Response::json('Hello');
+    Mail::to('wiaam409@gmail.com')->send(new VerificationCodeMail(123456));
+    return \response()->json(['hello']);
 });
 
 
