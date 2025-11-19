@@ -3,6 +3,7 @@
 use App\Http\Controllers\Authentication\AuthController;
 use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
+use App\Http\Controllers\ComplaintController;
 use Illuminate\Http\Request;
 use App\Mail\VerificationCodeMail;
 use Illuminate\Support\Facades\Mail;
