@@ -3,6 +3,7 @@
 use App\Http\Controllers\Authentication\AuthController;
 use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
+use App\Http\Controllers\ComplaintController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
@@ -43,3 +44,21 @@ Route::controller(EmailVerificationController::class)->group(function () {
     Route::post('verifyEmail', 'verifyEmail')->name('check.email_verification');
     Route::post('resendVerificationCode', 'resendVerificationCode')->name('check.verification_code');
 });
+
+
+
+Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
+       Route::post('complaints', [ComplaintController::class, 'store']);
+
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('complaints/{id}', [ComplaintController::class, 'updateStatus']);
+    Route::get('comlaintsdepartment', [ComplaintController::class, 'employeeComplaints']);
+});
+
+
+
+Route::get('governorates', [ComplaintController::class, 'governorates']);
+Route::get('alldepartments', [ComplaintController::class, 'listGroupedDepartments']);
+Route::get('departmentsbygovernorates', [ComplaintController::class, 'getDepartmentsByGovernorate']);

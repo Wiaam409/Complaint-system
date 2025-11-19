@@ -112,13 +112,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function createSampleUsers(): void
     {
-        // Create sample department
-        $electricityDept = Department::firstOrCreate(
-            ['name' => 'Electricity Ministry'],
-            [
-                'code' => 'MOE',
-            ]
-        );
+        $department = Department::where('name', 'Electricity Department')->first();
+
+        if (!$department) {
+            $department = Department::first();
+        }
 
         // 🔹 Citizen User (Mobile App)
         $citizenUser = User::firstOrCreate(
@@ -140,7 +138,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'phone' => '0912345679',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
-                'department_id' => $electricityDept->id,
+                'department_id' => $department->id,
             ]
         );
         $employeeUser->assignRole('employee');

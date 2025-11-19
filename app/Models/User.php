@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'role',
         'password',
         'department_id',
         'email_verified_at'
@@ -58,5 +59,16 @@ class User extends Authenticatable
     public function complaints()
     {
         return $this->hasMany(Complaint::class);
+    }
+    public function handledComplaints()
+    {
+        return $this->hasMany(Complaint::class, 'locked_by');
+    }
+
+   
+
+    public function logs()
+    {
+        return $this->hasMany(ComplaintLog::class);
     }
 }
