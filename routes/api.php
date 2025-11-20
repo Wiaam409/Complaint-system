@@ -52,12 +52,14 @@ Route::controller(EmailVerificationController::class)->group(function () {
 
 Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
        Route::post('complaints', [ComplaintController::class, 'store']);
-
+    Route::post('complaints/{id}/update', [ComplaintController::class, 'Update']);
+    Route::post('complaints/{id}/submit', [ComplaintController::class, 'submitUpdatedComplaint']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('complaints/{id}', [ComplaintController::class, 'updateStatus']);
     Route::get('comlaintsdepartment', [ComplaintController::class, 'employeeComplaints']);
+    Route::post('complaints/{id}/submit-update', [ComplaintController::class, 'requestUpdate']);
 });
 
 

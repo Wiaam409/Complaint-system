@@ -16,7 +16,7 @@ class StoreComplaintRequest extends FormRequest
     public function rules()
     {
         return [
-            'title'         => 'requiied|string|max:255',
+            'title'         => 'required|string|max:255',
             'description'   => 'required|string|min:5',
             'department_id' => 'required|integer|exists:departments,id',
             'location'      => 'required|string|max:255',

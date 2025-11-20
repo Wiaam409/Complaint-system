@@ -17,11 +17,11 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('set null');
             $table->foreignId('governorate_id') ->nullable() ->constrained('governorates') ->nullOnDelete();
-            
+
             $table->string('title')->nullable();
             $table->text('description');
             $table->string('location')->nullable();
-            $table->enum('status', ['new', 'in_progress', 'resolved', 'rejected'])->default('new');
+            $table->enum('status', ['new', 'in_progress', 'resolved', 'rejected', 'needs_update'])->default('new');
             $table->boolean('is_locked')->default(false);
             $table->timestamp('locked_at')->nullable();
             $table->foreignId('locked_by')->nullable()->constrained('users')->onDelete('set null');

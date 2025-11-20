@@ -26,7 +26,8 @@ class User extends Authenticatable
         'role',
         'password',
         'department_id',
-        'email_verified_at'
+        'email_verified_at',
+        'fcm_token'
     ];
 
     /**
@@ -65,7 +66,7 @@ class User extends Authenticatable
         return $this->hasMany(Complaint::class, 'locked_by');
     }
 
-   
+
 
     public function logs()
     {

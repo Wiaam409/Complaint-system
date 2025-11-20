@@ -26,7 +26,8 @@ class ComplaintController extends Controller
             'description',
             'department_id',
             'location',
-            'governorate_id'
+            'governorate_id',
+
         ]);
 
         $complaint = $this->service->create($data, $files);
@@ -115,5 +116,52 @@ class ComplaintController extends Controller
             'message' => $response['message'],
             'data' => $response['data']
         ], $response['status']);
+    }
+    public function requestUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string',
+            'fields_to_update' => 'array|required'
+        ]);
+
+        $result = $this->service->requestUpdateFromEmployee(
+            $id,
+            Auth::id(),
+            $request->reason,
+            $request->fields_to_update ?? []
+        );
+
+        return response()->json($result, $result['status']);}
+
+    public function Update(Request $request, $id)
+    {
+        $request->validate([
+            'title'       => 'sometimes|string',
+            'description' => 'sometimes|string',
+            'location'    => 'sometimes|string',
+            'attachments' => 'sometimes|array',
+            'attachments.*' => 'file'
+        ]);
+
+        $result = $this->service->submitUpdatedComplaint(
+            $id,
+            Auth::id(),
+            $request->only(['title', 'description', 'location']),
+            $request->file('attachments', [])
+        );
+
+        return response()->json($result, $result['status']);
+    }
+
+    public function submitUpdatedComplaint(Request $request, $id)
+    {
+        $result = $this->service->submitUpdatedComplaintByCitizen(
+            $id,
+            Auth::id(),
+            $request->all(),         
+            $request->file('attachments', [])
+        );
+
+        return response()->json($result, $result['status']);
     }
 }

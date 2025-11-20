@@ -8,7 +8,7 @@ use App\Repositories\DepartmentRepository;
 
 use App\Models\ComplaintAttachment;
 use App\Models\ComplaintLog;
-
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -278,4 +278,231 @@ class ComplaintService
             'data' => $complaints
         ];
     }
+    public function requestUpdateFromEmployee($complaintId, $employeeId, $reason, $fieldsToUpdate = [])
+    {
+        $complaint = $this->repo->findById($complaintId);
+
+        if (!$complaint) {
+            return [
+                'success' => false,
+                'status' => 404,
+                'message' => "Complaint not found",
+                'data' => null
+            ];
+        }
+
+        $employee = Auth::user();
+
+        if ($employee->role !== 'employee') {
+            return [
+                'success' => false,
+                'status' => 403,
+                'message' => "Only employees can request updates",
+                'data' => null
+            ];
+        }
+
+        if ($employee->department_id != $complaint->department_id) {
+            return [
+                'success' => false,
+                'status' => 403,
+                'message' => "You do not belong to this complaint’s department",
+                'data' => null
+            ];
+        }
+
+        if ($employee->governorate_id != $complaint->governorate_id) {
+            return [
+                'success' => false,
+                'status' => 403,
+                'message' => "You do not have access to this governorate",
+                'data' => null
+            ];
+        }
+
+        if ($complaint->status !== 'in_progress') {
+            return [
+                'success' => false,
+                'status' => 409,
+                'message' => "Complaint must be in progress to request modification",
+                'data' => null
+            ];
+        }
+
+        if ($complaint->locked_by != $employeeId) {
+            return [
+                'success' => false,
+                'status' => 403,
+                'message' => "Complaint is locked by another employee",
+                'data' => null
+            ];
+        }
+
+        $complaint->update([
+            'status' => 'needs_update',
+            'is_locked' => false,
+            'locked_at' => null,
+            'locked_by' => null,
+            'meta' => json_encode([
+                'update_reason' => $reason,
+                'fields_to_update' => $fieldsToUpdate
+            ])
+        ]);
+
+        ComplaintLog::create([
+            'complaint_id' => $complaintId,
+            'user_id'      => $employeeId,
+            'action'       => 'request_update',
+            'notes'        => "Employee requested update: {$reason}"
+        ]);
+
+        return [
+            'success' => true,
+            'status' => 200,
+            'message' => 'Update request sent successfully',
+            'data' => $complaint
+        ];
+    }
+
+    public function submitUpdatedComplaint($complaintId, $userId, $data, $attachments = [])
+    {
+        $complaint = $this->repo->findById($complaintId);
+
+        if (!$complaint) {
+            return [
+                'success' => false,
+                'status' => 404,
+                'message' => 'Complaint not found',
+                'data' => null
+            ];
+        }
+
+        if ($complaint->user_id != $userId) {
+            return [
+                'success' => false,
+                'status' => 403,
+                'message' => 'You are not authorized to update this complaint',
+                'data' => null
+            ];
+        }
+
+        $updateData = [
+            'title'       => $data['title'] ?? $complaint->title,
+            'description' => $data['description'] ?? $complaint->description,
+            'location'    => $data['location'] ?? $complaint->location,
+            'status'      => 'new',
+            'is_locked'   => false,
+            'locked_at'   => null,
+            'locked_by'   => null,
+        ];
+
+        $complaint->update($updateData);
+
+        if (!empty($attachments)) {
+            $this->saveUpdatedAttachments($complaint, $attachments);
+        }
+
+        ComplaintLog::create([
+            'complaint_id' => $complaintId,
+            'user_id'      => $userId,
+            'action'       => 'citizen_updated_complaint',
+            'notes'        => 'Citizen updated the complaint with new data and/or attachments'
+        ]);
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Complaint updated successfully',
+            'data'    => $complaint->fresh()
+        ];
+    }
+
+    private function saveUpdatedAttachments($complaint, $files)
+    {
+        foreach ($files as $file) {
+            $extension = $file->getClientOriginalExtension();
+            $fileName = uniqid() . '.' . $extension;
+
+            $folderPath = public_path("complaints/{$complaint->id}");
+
+            if (!file_exists($folderPath)) {
+                mkdir($folderPath, 0755, true);
+            }
+
+            $file->move($folderPath, $fileName);
+
+            $fileUrl = url("complaints/{$complaint->id}/{$fileName}");
+
+            ComplaintAttachment::create([
+                'complaint_id'  => $complaint->id,
+                'file_path'     => $fileUrl,
+                'original_name' => $file->getClientOriginalName(),
+                'mime'          => $file->getClientMimeType(),
+            ]);
+        }
+
+
+
+    }
+
+
+    public function submitUpdatedComplaintByCitizen($complaintId, $userId, $data, $attachments = [])
+    {
+        $complaint = $this->repo->findById($complaintId);
+
+        if (!$complaint) {
+            return [
+                'success' => false,
+                'status' => 404,
+                'message' => 'Complaint not found',
+                'data' => null
+            ];
+        }
+
+        if ($complaint->user_id != $userId) {
+            return [
+                'success' => false,
+                'status' => 403,
+                'message' => 'You are not authorized to update this complaint',
+                'data' => null
+            ];
+        }
+
+        if ($complaint->status !== 'in_progress') {
+            return [
+                'success' => false,
+                'status' => 409,
+                'message' => 'Complaint must be in progress to be updated by citizen',
+                'data' => null
+            ];
+        }
+
+        $updateData = $data;
+        $updateData['status'] = 'in_progress'; // تبقى in_progress
+        $updateData['is_locked'] = false;
+        $updateData['locked_at'] = null;
+        $updateData['locked_by'] = null;
+
+        $complaint->update($updateData);
+
+        if (!empty($attachments)) {
+            $this->saveUpdatedAttachments($complaint, $attachments);
+        }
+
+        ComplaintLog::create([
+            'complaint_id' => $complaintId,
+            'user_id'      => $userId,
+            'action'       => 'citizen_updated_complaint',
+            'notes'        => 'Citizen updated complaint while in progress'
+        ]);
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Complaint updated successfully',
+            'data'    => $complaint->fresh()
+        ];
+    }
+
+
 }
