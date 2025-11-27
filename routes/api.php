@@ -4,10 +4,10 @@ use App\Http\Controllers\Authentication\AuthController;
 use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
 use App\Http\Controllers\ComplaintController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\FcmController;
 use App\Mail\VerificationCodeMail;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -67,3 +67,8 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('governorates', [ComplaintController::class, 'governorates']);
 Route::get('alldepartments', [ComplaintController::class, 'listGroupedDepartments']);
 Route::get('departmentsbygovernorates', [ComplaintController::class, 'getDepartmentsByGovernorate']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/fcm-token', [FcmController::class, 'storeToken']);
+    Route::post('/send-test-notification', [FcmController::class, 'sendTestNotification']);
+});

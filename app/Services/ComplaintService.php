@@ -19,17 +19,20 @@ class ComplaintService
     protected $repo;
     protected $governorates;
     protected $departments;
+    protected $firebaseService;
 
     protected $cacheTTL = 300;
 
     public function __construct(
         ComplaintRepository $repo,
         GovernorateRepository $governorates,
-        DepartmentRepository $departments
+        DepartmentRepository $departments,
+        FirebaseService $firebaseService
     ) {
         $this->repo = $repo;
         $this->governorates = $governorates;
         $this->departments = $departments;
+        $this->firebaseService = $firebaseService;
     }
 
 
@@ -238,7 +241,12 @@ class ComplaintService
 
             // UPDATE STATUS
             $complaint->update(['status' => $status]);
-
+            $sent = $this->firebaseService->sendToToken(
+                $complaint->user->fcm_token,
+                'Status Update',
+                'Your complaint status has been updated to ' . $status,
+                ['type' => 'notice']
+            );
             ComplaintLog::create([
                 'complaint_id' => $complaintId,
                 'user_id' => $employeeId,
@@ -348,6 +356,12 @@ class ComplaintService
                 'fields_to_update' => $fieldsToUpdate
             ])
         ]);
+        $sent = $this->firebaseService->sendToToken(
+            $complaint->user->fcm_token,
+            'Fields update required',
+            'You have to update the required fields',
+            ['fields_to_update' => $fieldsToUpdate]
+        );
 
         ComplaintLog::create([
             'complaint_id' => $complaintId,

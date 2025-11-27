@@ -75,7 +75,7 @@ class AuthService {
 
         $user = $this->appendRolesAndPermissions($user);
         $user['token'] = $user->createToken('Auth token')->plainTextToken;
-        //$user['fcm_token'] = $request->fcm_token;
+        $user['fcm_token'] = $request->fcm_token;
 
         return ['user' => $user, 'message' => __('messages.signin_successful'), 'status' => 200];
     }

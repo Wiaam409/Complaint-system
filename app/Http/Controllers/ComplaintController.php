@@ -5,16 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreComplaintRequest;
 use App\Services\ComplaintService;
 use App\Helpers\ApiResponse;
+use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ComplaintController extends Controller
 {
     protected $service;
+    protected $firebaseService;
 
-    public function __construct(ComplaintService $service)
+    public function __construct(ComplaintService $service, FirebaseService $firebaseService)
     {
         $this->service = $service;
+        $this->firebaseService = $firebaseService;
     }
 
     public function store(StoreComplaintRequest $request)
@@ -158,7 +161,7 @@ class ComplaintController extends Controller
         $result = $this->service->submitUpdatedComplaintByCitizen(
             $id,
             Auth::id(),
-            $request->all(),         
+            $request->all(),
             $request->file('attachments', [])
         );
 
