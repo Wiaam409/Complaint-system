@@ -21,7 +21,7 @@ class StoreComplaintRequest extends FormRequest
             'department_id' => 'required|integer|exists:departments,id',
             'location'      => 'required|string|max:255',
             'governorate_id' => 'required|integer|exists:governorates,id',
-            'attachments'   => 'required|array',
+            'attachments'   => 'sometimes|array',
             'attachments.*' => 'file|mimes:jpg,jpeg,png,pdf|max:10240',
         ];
     }
