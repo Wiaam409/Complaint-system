@@ -13,24 +13,18 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Clear cached roles and permissions
+        // Clear cached roles/permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions
         $this->createPermissions();
-
-        // Create roles and assign permissions
         $this->createRoles();
-
-        // Create sample users
         $this->createSampleUsers();
     }
 
     private function createPermissions(): void
     {
-        // Complaint permissions
         $permissions = [
-            // Complaint management
+            // Complaint
             'complaints.view',
             'complaints.create',
             'complaints.update',
@@ -43,14 +37,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'complaints.view_history',
             'complaints.export',
 
-            // User management (admin only)
+            // Users
             'users.view',
             'users.create',
             'users.update',
             'users.delete',
             'users.manage_roles',
 
-            // System management (admin only)
+            // System
             'system.dashboard.view',
             'system.reports.generate',
             'system.reports.export',
@@ -58,7 +52,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'system.backup.manage',
             'system.settings.manage',
 
-            // Department management (admin only)
+            // Departments
             'departments.view',
             'departments.manage',
             'departments.staff.assign',
@@ -67,18 +61,19 @@ class RolesAndPermissionsSeeder extends Seeder
         foreach ($permissions as $permission) {
             Permission::firstOrCreate([
                 'name' => $permission,
-                'guard_name' => 'api' // Default to api guard
+                'guard_name' => 'api',
             ]);
         }
 
-        $this->command->info('All permissions created successfully.');
+        $this->command->info('All permissions created.');
     }
 
     private function createRoles(): void
     {
-        // 🔹 Citizen Role (Mobile App Users)
+        // Citizen
         $citizen = Role::firstOrCreate([
             'name' => 'citizen',
+            'guard_name' => 'api'
         ]);
         $citizen->syncPermissions([
             'complaints.create',
@@ -87,9 +82,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'complaints.view_history',
         ]);
 
-        // 🔹 Employee Role (Department Staff - React Dashboard)
+        // Employee
         $employee = Role::firstOrCreate([
             'name' => 'employee',
+            'guard_name' => 'api'
         ]);
         $employee->syncPermissions([
             'complaints.view',
@@ -101,24 +97,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'system.dashboard.view',
         ]);
 
-        // 🔹 Admin Role (Full Access - React Dashboard)
+        // Admin
         $admin = Role::firstOrCreate([
             'name' => 'admin',
+            'guard_name' => 'api'
         ]);
         $admin->syncPermissions(Permission::all());
 
-        $this->command->info('Roles created and permissions assigned successfully.');
+        $this->command->info('Roles created and assigned.');
     }
 
     private function createSampleUsers(): void
     {
-        $department = Department::where('name', 'Electricity Department')->first();
+        $department = Department::first();
 
-        if (!$department) {
-            $department = Department::first();
-        }
-
-        // 🔹 Citizen User (Mobile App)
+        // Citizen User
         $citizenUser = User::firstOrCreate(
             ['email' => 'citizen@example.com'],
             [
@@ -126,11 +119,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 'phone' => '0912345678',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => 'citizen',
             ]
         );
         $citizenUser->assignRole('citizen');
 
-        // 🔹 Employee User (React Dashboard)
+        // Employee User
         $employeeUser = User::firstOrCreate(
             ['email' => 'employee@electricity.com'],
             [
@@ -138,12 +132,13 @@ class RolesAndPermissionsSeeder extends Seeder
                 'phone' => '0912345679',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
-                'department_id' => $department->id,
+                'department_id' => $department?->id,
+                'role' => 'employee',
             ]
         );
         $employeeUser->assignRole('employee');
 
-        // 🔹 Admin User (React Dashboard)
+        // Admin User
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@complaints.gov'],
             [
@@ -151,12 +146,13 @@ class RolesAndPermissionsSeeder extends Seeder
                 'phone' => '0912345681',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => 'admin',
             ]
         );
         $adminUser->assignRole('admin');
 
-        $this->command->info('Sample users created successfully.');
-        $this->command->info('🔐 Login Credentials:');
+        $this->command->info('Sample users created.');
+        $this->command->info('Credentials:');
         $this->command->info('Citizen: citizen@example.com / password');
         $this->command->info('Employee: employee@electricity.com / password');
         $this->command->info('Admin: admin@complaints.gov / password');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Authentication\AuthController;
 use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
@@ -72,4 +73,10 @@ Route::get('departmentsbygovernorates', [ComplaintController::class, 'getDepartm
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/fcm-token', [FcmController::class, 'storeToken']);
     Route::post('/send-test-notification', [FcmController::class, 'sendTestNotification']);
+
+
+
+    Route::middleware('auth:sanctum', 'role:admin')->group(function () {
+        Route::get('admin/complaints', [AdminController::class, 'adminList']);
+    });
 });
