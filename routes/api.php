@@ -78,5 +78,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('auth:sanctum', 'role:admin')->group(function () {
         Route::get('admin/complaints', [AdminController::class, 'adminList']);
+        Route::post('Addemployee', [AdminController::class, 'store']);
+        Route::get('employees/filter', [AdminController::class, 'employeesByDepartmentGovernorate']);
+        Route::get('employees/{id}', [AdminController::class, 'show']);
+        Route::Post('employees/{id}', [AdminController::class, 'update']);
+        Route::patch('User/{id}/toggle-active', [AdminController::class, 'toggleActive']);
+        Route::delete('User/{id}', [AdminController::class, 'destroy']);
     });
 });

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'governorate_id',
         'department_id',
         'email_verified_at',
         'fcm_token'
@@ -71,4 +72,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ComplaintLog::class);
     }
+
+
+
+
+protected $guard_name = 'api';
 }
