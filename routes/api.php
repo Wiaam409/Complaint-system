@@ -84,5 +84,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::Post('employees/{id}', [AdminController::class, 'update']);
         Route::patch('User/{id}/toggle-active', [AdminController::class, 'toggleActive']);
         Route::delete('User/{id}', [AdminController::class, 'destroy']);
+
+        Route::get('admin/summary', [AdminController::class, 'complaintsStats']);
+        Route::get('system/logs/stats', [AdminController::class, 'stats']);
+
+        Route::get('admin/pdf', [AdminController::class, 'exportComplaintsPdf']);
     });
 });

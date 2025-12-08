@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Models\Complaint;
 use App\Models\ComplaintLog;
+use App\Models\system_logs;
+use App\Models\SystemLog;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
@@ -298,5 +301,116 @@ class AdminService
             'updated_at'    => $e->updated_at,
         ];
     }
+    public function complaintsSummary(string $from, string $to, ?int $governorateId = null, ?int $departmentId = null): array
+    {
+        $start = Carbon::parse($from)->startOfDay();
+        $end   = Carbon::parse($to)->endOfDay();
 
+
+        $query = Complaint::query()
+            ->whereBetween('created_at', [$start, $end]);
+
+        if ($governorateId) {
+            $query->where('governorate_id', $governorateId);
+        }
+
+        if ($departmentId) {
+            $query->where('department_id', $departmentId);
+        }
+
+        $total = (clone $query)->count();
+
+        $byStatusRaw = (clone $query)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $allStatuses = [
+            'new',
+            'in_progress',
+            'resolved',
+            'rejected',
+            'needs_update'
+        ];
+
+        $byStatus = [];
+        foreach ($allStatuses as $s) {
+            $byStatus[$s] = isset($byStatusRaw[$s]) ? (int)$byStatusRaw[$s] : 0;
+        }
+
+        $breakdown = [];
+        foreach ($byStatus as $status => $count) {
+            $breakdown[] = ['status' => $status, 'count' => $count];
+        }
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Complaints statistics retrieved successfully',
+            'data'    => [
+                'filters' => [
+                    'from' => $start->toDateTimeString(),
+                    'to' => $end->toDateTimeString(),
+                    'governorate_id' => $governorateId,
+                    'department_id' => $departmentId,
+                ],
+                'total' => (int) $total,
+                'by_status' => $byStatus,
+                'breakdown' => $breakdown,
+            ],
+        ];
+    }
+
+    public function getStats(array $filters): array
+    {
+        $query = SystemLog::query();
+
+        if (!empty($filters['start_date'])) {
+            $query->whereDate('created_at', '>=', $filters['start_date']);
+        }
+
+        if (!empty($filters['end_date'])) {
+            $query->whereDate('created_at', '<=', $filters['end_date']);
+        }
+
+        // إجمالي الطلبات
+        $totalRequests = $query->count();
+
+        // إجمالي الأخطاء
+        $totalErrors = (clone $query)->where('is_error', true)->count();
+
+        // متوسط زمن التنفيذ
+        $avgTime = (clone $query)->avg('execution_time_ms');
+
+        // أسرع طلب
+        $minTime = (clone $query)->min('execution_time_ms');
+
+        // أبطأ طلب
+        $maxTime = (clone $query)->max('execution_time_ms');
+
+        // أهم الإندبوينتات (مع نفس الفلاتر)
+        $topEndpoints = (clone $query)
+            ->selectRaw('endpoint, COUNT(*) as count')
+            ->groupBy('endpoint')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get();
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'System stats retrieved successfully',
+
+            'data' => [
+                'total_requests'   => $totalRequests,
+                'total_errors'     => $totalErrors,
+                'avg_execution_ms' => round($avgTime, 2),
+                'min_execution_ms' => $minTime,
+                'max_execution_ms' => $maxTime,
+                'top_endpoints'    => $topEndpoints,
+            ]
+        ];
+    }
 }

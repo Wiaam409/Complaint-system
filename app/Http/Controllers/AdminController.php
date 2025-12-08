@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Admin\CreateEmployeeRequest;
 use App\Http\Requests\Admin\UpdateEmployeeRequest;
 use App\Http\Requests\AdminListComplaintsRequest;
+use App\Http\Requests\AdminReportRequest;
 use App\Http\Requests\CreateEmployeeRequest as RequestsCreateEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest as RequestsUpdateEmployeeRequest;
+use App\Models\Department;
+use App\Models\Governorate;
 use App\Services\AdminService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
@@ -109,6 +113,60 @@ class AdminController extends Controller
         $result = $this->service->getEmployeeWithComplaints((int)$id);
         return response()->json($result, $result['status']);
     }
+    public function complaintsStats(AdminReportRequest $request)
+    {
+        $validated = $request->validated();
+
+        $from = $validated['from'];
+        $to   = $validated['to'];
+        $gov  = $validated['governorate_id'] ;
+        $dept = $validated['department_id'];
+
+        $result = $this->service->complaintsSummary($from, $to, $gov, $dept);
+
+        return response()->json($result, $result['status']);
+    }
+    public function stats(Request $request)
+    {
+        if (!$request->start_date || !$request->end_date) {
+            return response()->json([
+                'success' => false,
+                'status'  => 422,
+                'message' => 'start_date and end_date are required',
+                'data'    => null
+            ], 422);
+        }
+
+        $filters = [
+            'start_date' => $request->start_date,
+            'end_date'   => $request->end_date,
+        ];
+
+        $result = $this->service->getStats($filters);
+        return response()->json($result, $result['status']);
+    }
+    public function exportComplaintsPdf(AdminReportRequest $request)
+    {
+        $validated = $request->validated();
+
+        $from  = $validated['from'];
+        $to    = $validated['to'];
+        $gov   = $validated['governorate_id'] ?? null;
+        $dept  = $validated['department_id'] ?? null;
+
+        $stats = $this->service->complaintsSummary($from, $to, $gov, $dept);
+
+        $data = $stats['data'];
+
+        $data['filters']['governorate_name'] =
+            $gov ? Governorate::find($gov)?->name ?? 'Unknown' : 'All';
+
+        $data['filters']['department_name'] =
+            $dept ? Department::find($dept)?->name ?? 'Unknown' : 'All';
+
+        $pdf = Pdf::loadView('reports.complaints', $data)
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->download('complaints-report.pdf');
+    }
 }
-
-

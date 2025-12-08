@@ -241,12 +241,12 @@ class ComplaintService
 
             // UPDATE STATUS
             $complaint->update(['status' => $status]);
-            $sent = $this->firebaseService->sendToToken(
-                $complaint->user->fcm_token,
-                'Status Update',
-                'Your complaint status has been updated to ' . $status,
-                ['type' => 'notice']
-            );
+            // $sent = $this->firebaseService->sendToToken(
+            //     $complaint->user->fcm_token,
+            //     'Status Update',
+            //     'Your complaint status has been updated to ' . $status,
+            //     ['type' => 'notice']
+            // );
             ComplaintLog::create([
                 'complaint_id' => $complaintId,
                 'user_id' => $employeeId,
