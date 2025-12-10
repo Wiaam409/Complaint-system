@@ -41,6 +41,7 @@ class ComplaintRepository
     public function listByUser(int $userId, int $limit = 15): LengthAwarePaginator
     {
         return $this->model
+            ->with(['department', 'governorate'])
             ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->paginate($limit);
