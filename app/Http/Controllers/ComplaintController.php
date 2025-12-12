@@ -41,7 +41,7 @@ class ComplaintController extends Controller
     public function index()
     {
         return ApiResponse::success(
-            $this->service->getUserComplaints(),
+            $this->service->getUserComplaints(10),
             'Complaints fetched successfully'
         );
     }
