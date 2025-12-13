@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Complaint;
+use App\Models\Notification;
 use App\Repositories\ComplaintRepository;
 use App\Repositories\GovernorateRepository;
 use App\Repositories\DepartmentRepository;
@@ -60,7 +61,7 @@ class ComplaintService
 
             $complaint = $this->repo->create($data);
             Notification::create([
-                'user_id' => $userId,
+                'user_id' => $user->id,
                 'title' => 'New Complaint Submitted',
                 'message' => 'Your complaint has been received',
                 'type' => 'new_complaint',
@@ -260,7 +261,7 @@ class ComplaintService
                 ['type' => 'notice']
             );
             Notification::create([
-                'user_id' => $user->id,
+                'user_id' => $complaint->user->id,
                 'title' => 'Status Updated',
                 'message' => 'Your complaint status has been updated to ' . $status,
                 'type' => 'status_update',
