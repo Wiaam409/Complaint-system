@@ -52,10 +52,15 @@ Route::controller(EmailVerificationController::class)->group(function () {
 
 
 Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
-       Route::post('complaints', [ComplaintController::class, 'store']);
+    Route::post('complaints', [ComplaintController::class, 'store']);
     Route::post('complaints/{id}/update', [ComplaintController::class, 'Update']);
     Route::post('complaints/{id}/submit', [ComplaintController::class, 'submitUpdatedComplaint']);
     Route::get('citizen/home', [ComplaintController::class, 'home']);
+    
+    Route::get('/notifications', [NotificationController::class, 'getUserNotifications']);
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::put('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+
 });
 
 Route::middleware('auth:sanctum')->group(function () {

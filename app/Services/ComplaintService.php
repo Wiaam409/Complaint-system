@@ -59,7 +59,17 @@ class ComplaintService
             $data['user_id'] = $user->id;
 
             $complaint = $this->repo->create($data);
-
+            Notification::create([
+                'user_id' => $userId,
+                'title' => 'New Complaint Submitted',
+                'message' => 'Your complaint has been received',
+                'type' => 'new_complaint',
+                'complaint_id' => $complaint->id,
+                'metadata' => [
+                    'reference_number' => $data['reference_number'],
+                    'submitted_at' => now()->toDateTimeString(),
+                ],
+            ]);
             if (!empty($files)) {
                 $this->saveAttachments($complaint, $files);
             }
@@ -240,15 +250,27 @@ class ComplaintService
                     'notes' => 'Complaint unlocked automatically after completion'
                 ]);
             }
-
+            $old_status = $complaint->status;
             // UPDATE STATUS
             $complaint->update(['status' => $status]);
             $sent = $this->firebaseService->sendToToken(
                 $complaint->user->fcm_token,
-                'Status Update',
+                'status_update',
                 'Your complaint status has been updated to ' . $status,
                 ['type' => 'notice']
             );
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => 'Status Updated',
+                'message' => 'Your complaint status has been updated to ' . $status,
+                'type' => 'status_update',
+                'complaint_id' => $complaint->id,
+                'metadata' => [
+                    'old_status' => $old_status,
+                    'new_status' => $status,
+                    'updated_at' => now()->toDateTimeString(),
+                ],
+            ]);
             ComplaintLog::create([
                 'complaint_id' => $complaintId,
                 'user_id' => $employeeId,
@@ -364,6 +386,19 @@ class ComplaintService
             'You have to update the required fields',
             ['fields_to_update' => $fieldsToUpdate]
         );
+
+        Notification::create([
+            'user_id' => $complaint->user->id,
+            'title' => 'Additional Information Required',
+            'message' => 'We need more information about your complaint',
+            'type' => 'info_request',
+            'complaint_id' => $complaintId,
+            'metadata' => [
+                'requested_info' => $fieldsToUpdate,
+                'requested_by' => 'Officer Name',
+                'reason' => $reason,
+            ],
+        ]);
 
         ComplaintLog::create([
             'complaint_id' => $complaintId,
