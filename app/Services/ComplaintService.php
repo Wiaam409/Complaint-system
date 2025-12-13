@@ -58,8 +58,16 @@ class ComplaintService
 
             $data['reference_number'] = $this->generateReference();
             $data['user_id'] = $user->id;
-
             $complaint = $this->repo->create($data);
+            $sent = $this->firebaseService->sendToToken(
+                $complaint->user->fcm_token,
+                'New Complaint Submitted',
+                'Your complaint has been received',
+                [
+                    'reference_number' => $data['reference_number'],
+                    'submitted_at' => now()->toDateTimeString(),
+                ]
+            );
             Notification::create([
                 'user_id' => $user->id,
                 'title' => 'New Complaint Submitted',
@@ -256,9 +264,13 @@ class ComplaintService
             $complaint->update(['status' => $status]);
             $sent = $this->firebaseService->sendToToken(
                 $complaint->user->fcm_token,
-                'status_update',
+                'Status Update',
                 'Your complaint status has been updated to ' . $status,
-                ['type' => 'notice']
+                [
+                    'old_status' => $old_status,
+                    'new_status' => $status,
+                    'updated_at' => now()->toDateTimeString(),
+                ]
             );
             Notification::create([
                 'user_id' => $complaint->user->id,
