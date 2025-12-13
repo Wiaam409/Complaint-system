@@ -41,7 +41,7 @@ class ComplaintController extends Controller
     public function index()
     {
         return ApiResponse::success(
-            $this->service->getUserComplaints(),
+            $this->service->getUserComplaints(10),
             'Complaints fetched successfully'
         );
     }
@@ -167,4 +167,45 @@ class ComplaintController extends Controller
 
         return response()->json($result, $result['status']);
     }
+
+
+
+    public function details(int $id, Request $request)
+    {
+        $employee = Auth::user();
+
+        if ($employee->role !== 'employee') {
+            return response()->json([
+                'success' => false,
+                'status'  => 403,
+                'message' => 'Forbidden',
+                'data'    => null
+            ], 403);
+        }
+
+        $result = $this->service->getComplaintForEmployee($id, $employee);
+
+        return response()->json($result, $result['status']);
+    }
+
+
+
+    public function home(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'citizen') {
+            return response()->json([
+                'success' => false,
+                'status'  => 403,
+                'message' => 'Forbidden: citizen only',
+                'data'    => null
+            ], 403);
+        }
+
+        $result = $this->service->home();
+        return response()->json($result, $result['status']);
+    }
+
+
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Authentication\AuthController;
 use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
@@ -54,6 +55,7 @@ Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
        Route::post('complaints', [ComplaintController::class, 'store']);
     Route::post('complaints/{id}/update', [ComplaintController::class, 'Update']);
     Route::post('complaints/{id}/submit', [ComplaintController::class, 'submitUpdatedComplaint']);
+    Route::get('citizen/home', [ComplaintController::class, 'home']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -61,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('comlaintsdepartment', [ComplaintController::class, 'employeeComplaints']);
     Route::post('complaints/{id}/submit-update', [ComplaintController::class, 'requestUpdate']);
     Route::get('complaints/get', [ComplaintController::class, 'index']);
+    Route::get('complaints/{id}', [ComplaintController::class, 'details']);
 });
 
 
@@ -72,4 +75,21 @@ Route::get('departmentsbygovernorates', [ComplaintController::class, 'getDepartm
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/fcm-token', [FcmController::class, 'storeToken']);
     Route::post('/send-test-notification', [FcmController::class, 'sendTestNotification']);
+
+
+
+    Route::middleware('auth:sanctum', 'role:admin')->group(function () {
+        Route::get('admin/complaints', [AdminController::class, 'adminList']);
+        Route::post('Addemployee', [AdminController::class, 'store']);
+        Route::get('employees/filter', [AdminController::class, 'employeesByDepartmentGovernorate']);
+        Route::get('employees/{id}', [AdminController::class, 'show']);
+        Route::Post('employees/{id}', [AdminController::class, 'update']);
+        Route::patch('User/{id}/toggle-active', [AdminController::class, 'toggleActive']);
+        Route::delete('User/{id}', [AdminController::class, 'destroy']);
+
+        Route::get('admin/summary', [AdminController::class, 'complaintsStats']);
+        Route::get('system/logs/stats', [AdminController::class, 'stats']);
+
+        Route::get('admin/pdf', [AdminController::class, 'exportComplaintsPdf']);
+    });
 });
