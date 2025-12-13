@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Complaint;
 use App\Repositories\ComplaintRepository;
 use App\Repositories\GovernorateRepository;
 use App\Repositories\DepartmentRepository;
@@ -117,12 +118,13 @@ class ComplaintService
 
     public function getUserComplaints()
     {
-        $userId = Auth::id();
+
+        //$userId = Auth::id();
 
         return Cache::remember(
-            "user_{$userId}_complaints",
+            "complaints",
             $this->cacheTTL,
-            fn() => $this->repo->listByUser($userId)
+            fn() => Complaint::all()
         );
     }
 
