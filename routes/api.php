@@ -55,6 +55,7 @@ Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
        Route::post('complaints', [ComplaintController::class, 'store']);
     Route::post('complaints/{id}/update', [ComplaintController::class, 'Update']);
     Route::post('complaints/{id}/submit', [ComplaintController::class, 'submitUpdatedComplaint']);
+    Route::get('citizen/home', [ComplaintController::class, 'home']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {

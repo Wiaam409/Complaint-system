@@ -189,4 +189,23 @@ class ComplaintController extends Controller
     }
 
 
+
+    public function home(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'citizen') {
+            return response()->json([
+                'success' => false,
+                'status'  => 403,
+                'message' => 'Forbidden: citizen only',
+                'data'    => null
+            ], 403);
+        }
+
+        $result = $this->service->home();
+        return response()->json($result, $result['status']);
+    }
+
+
 }

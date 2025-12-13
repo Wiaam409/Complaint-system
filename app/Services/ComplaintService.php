@@ -596,4 +596,56 @@ public function getUserComplaints(int $limit = 15)
             'created_at' => $c->created_at->format('Y-m-d H:i'),
         ];
     }
+
+    public function home(): array
+    {
+        $user = Auth::user();
+
+        $complaints = Complaint::with(['governorate', 'department'])
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+
+        $summary = [
+            'total'       => $complaints->count(),
+            'new'         => $complaints->where('status', 'new')->count(),
+            'in_progress' => $complaints->where('status', 'in_progress')->count(),
+            'resolved'    => $complaints->where('status', 'resolved')->count(),
+            'rejected'    => $complaints->where('status', 'rejected')->count(),
+            'needs_update'=> $complaints->where('status', 'needs_update')->count(),
+        ];
+
+        $list = $complaints
+            ->where('status', 'needs_update')
+            ->map(function ($c) {
+                return [
+                    'id'               => $c->id,
+                    'reference_number' => $c->reference_number,
+                    'title'            => $c->title,
+                    'status'           => $c->status,
+                    'governorate'      => $c->governorate?->name,
+                    'department'       => $c->department?->name,
+                    'created_at'       => $c->created_at,
+                ];
+            })
+            ->values();
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Citizen home data retrieved successfully',
+            'data'    => [
+                'user' => [
+                    'id'   => $user->id,
+                    'name' => $user->name,
+                    'email'=> $user->email,
+                ],
+                'summary'    => $summary,
+                'complaints needs update' => $list,
+            ]
+        ];
+    }
+
+
 }
