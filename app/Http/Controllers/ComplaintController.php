@@ -167,4 +167,26 @@ class ComplaintController extends Controller
 
         return response()->json($result, $result['status']);
     }
+
+
+
+    public function details(int $id, Request $request)
+    {
+        $employee = Auth::user();
+
+        if ($employee->role !== 'employee') {
+            return response()->json([
+                'success' => false,
+                'status'  => 403,
+                'message' => 'Forbidden',
+                'data'    => null
+            ], 403);
+        }
+
+        $result = $this->service->getComplaintForEmployee($id, $employee);
+
+        return response()->json($result, $result['status']);
+    }
+
+
 }

@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Complaint;
 use App\Repositories\ComplaintRepository;
 use App\Repositories\GovernorateRepository;
 use App\Repositories\DepartmentRepository;
 
 use App\Models\ComplaintAttachment;
 use App\Models\ComplaintLog;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -522,4 +524,76 @@ public function getUserComplaints(int $limit = 15)
     }
 
 
+    public function getComplaintForEmployee(int $complaintId, User $employee): array
+    {
+        $complaint = Complaint::with([
+            'user:id,name,email',
+            'governorate:id,name',
+            'department:id,name',
+            'attachments',
+            'logs.user:id,name'
+        ])->find($complaintId);
+
+        if (!$complaint) {
+            return [
+                'success' => false,
+                'status'  => 404,
+                'message' => 'Complaint not found',
+                'data'    => null
+            ];
+        }
+
+        // 🔒 صلاحيات الموظف
+        if (
+            $complaint->governorate_id !== $employee->governorate_id ||
+            $complaint->department_id  !== $employee->department_id
+        ) {
+            return [
+                'success' => false,
+                'status'  => 403,
+                'message' => 'You are not authorized to view this complaint',
+                'data'    => null
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Complaint details retrieved successfully',
+            'data'    => $this->formatComplaintDetails($complaint)
+        ];
+    }
+    private function formatComplaintDetails(Complaint $c): array
+    {
+        return [
+            'id' => $c->id,
+            'reference_number' => $c->reference_number,
+            'title' => $c->title,
+            'description' => $c->description,
+            'status' => $c->status,
+
+            'citizen' => [
+                'name'  => $c->user->name,
+                'email' => $c->user->email,
+            ],
+
+            'governorate' => $c->governorate->name,
+            'department'  => $c->department->name,
+
+            'attachments' => $c->attachments->map(fn($a) => [
+                'id' => $a->id,
+                'file_url' => $a->file_path,
+                'original_name' => $a->original_name,
+            ]),
+
+            'timeline' => $c->logs->map(fn($log) => [
+                'action' => $log->action,
+                'notes'  => $log->notes,
+                'by'     => $log->user?->name,
+                'date'   => $log->created_at->format('Y-m-d H:i'),
+            ]),
+
+            'created_at' => $c->created_at->format('Y-m-d H:i'),
+        ];
+    }
 }
