@@ -63,7 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('comlaintsdepartment', [ComplaintController::class, 'employeeComplaints']);
     Route::post('complaints/{id}/submit-update', [ComplaintController::class, 'requestUpdate']);
     Route::get('complaints/get', [ComplaintController::class, 'index']);
-    Route::get('complaints/{id}', [ComplaintController::class, 'details']);
+    Route::get('details/{id}', [ComplaintController::class, 'details']);
 });
 
 
