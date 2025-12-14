@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Complaint;
+use App\Models\Notification;
 use App\Repositories\ComplaintRepository;
 use App\Repositories\GovernorateRepository;
 use App\Repositories\DepartmentRepository;
@@ -57,9 +58,27 @@ class ComplaintService
 
             $data['reference_number'] = $this->generateReference();
             $data['user_id'] = $user->id;
-
             $complaint = $this->repo->create($data);
-
+            $sent = $this->firebaseService->sendToToken(
+                $complaint->user->fcm_token,
+                'New Complaint Submitted',
+                'Your complaint has been received',
+                [
+                    'reference_number' => $data['reference_number'],
+                    'submitted_at' => now()->toDateTimeString(),
+                ]
+            );
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => 'New Complaint Submitted',
+                'message' => 'Your complaint has been received',
+                'type' => 'new_complaint',
+                'complaint_id' => $complaint->id,
+                'metadata' => [
+                    'reference_number' => $data['reference_number'],
+                    'submitted_at' => now()->toDateTimeString(),
+                ],
+            ]);
             if (!empty($files)) {
                 $this->saveAttachments($complaint, $files);
             }
@@ -117,19 +136,16 @@ class ComplaintService
         Cache::forget("user_{$userId}_complaints");
     }
 
-public function getUserComplaints(int $limit = 15)
-{
-    $userId = Auth::id();
-    $page   = request('page', 1);
+    public function getUserComplaints()
+    {
+        $userId = Auth::id();
 
-    $cacheKey = "user_{$userId}_complaints_page_{$page}_limit_{$limit}";
-
-    return Cache::remember(
-        $cacheKey,
-        $this->cacheTTL,
-        fn() => $this->repo->listByUser($userId, $limit)
-    );
-}
+        return Cache::remember(
+            "user_{$userId}_complaints",
+            $this->cacheTTL,
+            fn() => $this->repo->listByUser($userId)
+        );
+    }
 
     public function getComplaintById($id)
     {
@@ -243,15 +259,31 @@ public function getUserComplaints(int $limit = 15)
                     'notes' => 'Complaint unlocked automatically after completion'
                 ]);
             }
-
+            $old_status = $complaint->status;
             // UPDATE STATUS
             $complaint->update(['status' => $status]);
-            // $sent = $this->firebaseService->sendToToken(
-            //     $complaint->user->fcm_token,
-            //     'Status Update',
-            //     'Your complaint status has been updated to ' . $status,
-            //     ['type' => 'notice']
-            // );
+            $sent = $this->firebaseService->sendToToken(
+                $complaint->user->fcm_token,
+                'Status Update',
+                'Your complaint status has been updated to ' . $status,
+                [
+                    'old_status' => $old_status,
+                    'new_status' => $status,
+                    'updated_at' => now()->toDateTimeString(),
+                ]
+            );
+            Notification::create([
+                'user_id' => $complaint->user->id,
+                'title' => 'Status Updated',
+                'message' => 'Your complaint status has been updated to ' . $status,
+                'type' => 'status_update',
+                'complaint_id' => $complaint->id,
+                'metadata' => [
+                    'old_status' => $old_status,
+                    'new_status' => $status,
+                    'updated_at' => now()->toDateTimeString(),
+                ],
+            ]);
             ComplaintLog::create([
                 'complaint_id' => $complaintId,
                 'user_id' => $employeeId,
@@ -367,6 +399,19 @@ public function getUserComplaints(int $limit = 15)
             'You have to update the required fields',
             ['fields_to_update' => $fieldsToUpdate]
         );
+
+        Notification::create([
+            'user_id' => $complaint->user->id,
+            'title' => 'Additional Information Required',
+            'message' => 'We need more information about your complaint',
+            'type' => 'info_request',
+            'complaint_id' => $complaintId,
+            'metadata' => [
+                'requested_info' => $fieldsToUpdate,
+                'requested_by' => 'Officer Name',
+                'reason' => $reason,
+            ],
+        ]);
 
         ComplaintLog::create([
             'complaint_id' => $complaintId,

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Notification;
 
 class FcmController extends Controller
 {
