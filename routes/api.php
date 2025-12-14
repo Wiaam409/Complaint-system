@@ -6,6 +6,7 @@ use App\Http\Controllers\Authentication\EmailVerificationController;
 use App\Http\Controllers\Authentication\ResetPasswordController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\FcmController;
+use App\Http\Controllers\NotificationController;
 use App\Mail\VerificationCodeMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -56,7 +57,7 @@ Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
     Route::post('complaints/{id}/update', [ComplaintController::class, 'Update']);
     Route::post('complaints/{id}/submit', [ComplaintController::class, 'submitUpdatedComplaint']);
     Route::get('citizen/home', [ComplaintController::class, 'home']);
-    
+
     Route::get('/notifications', [NotificationController::class, 'getUserNotifications']);
     Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     Route::put('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
