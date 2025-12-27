@@ -13,7 +13,6 @@ class SystemLog extends Model
         'endpoint',
         'method',
         'status_code',
-        'request_payload',
         'response_payload',
         'is_error',
         'error_message',

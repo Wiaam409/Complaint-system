@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('method');               // GET / POST / PUT ...
             $table->integer('status_code');         // 200 / 404 /500
 
-            $table->longText('request_payload')->nullable();
             $table->longText('response_payload')->nullable();
 
             $table->boolean('is_error')->default(false);

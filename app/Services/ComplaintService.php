@@ -46,19 +46,17 @@ class ComplaintService
 
             $user = Auth::user();
 
-            // التأكد أن المحافظة موجودة
             if (!$this->governorates->find($data['governorate_id'] ?? null)) {
                 abort(422, 'Invalid governorate_id');
             }
 
-            // التأكد أن القسم موجود
             if (!$this->departments->find($data['department_id'] ?? null)) {
                 abort(422, 'Invalid department_id');
             }
 
             $data['reference_number'] = $this->generateReference();
             $data['user_id'] = $user->id;
-            $complaint = $this->repo->create($data);
+            $complaint = $this->repo-> create($data);
             $sent = $this->firebaseService->sendToToken(
                 $complaint->user->fcm_token,
                 'New Complaint Submitted',
@@ -120,6 +118,7 @@ class ComplaintService
             ]);
         }
     }
+
 
     private function createLog($complaintId, $userId, $action, $notes = null)
     {
