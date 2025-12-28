@@ -1,0 +1,16 @@
+governorate_id,governorate_name,department_id,department_name
+1,Damascus,1,Electricity Department
+1,Damascus,2,Water Department
+1,Damascus,3,Municipality
+1,Damascus,4,Traffic Department
+1,Damascus,5,Police Department
+2,Rif Dimashq,1,Electricity Department
+2,Rif Dimashq,2,Water Department
+2,Rif Dimashq,3,Municipality
+2,Rif Dimashq,4,Traffic Department
+2,Rif Dimashq,5,Police Department
+3,Aleppo,1,Electricity Department
+3,Aleppo,2,Water Department
+3,Aleppo,3,Municipality
+3,Aleppo,4,Traffic Department
+3,Aleppo,5,Police Department
