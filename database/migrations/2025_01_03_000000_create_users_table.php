@@ -24,7 +24,7 @@ return new class extends Migration
             $table->foreignId('governorate_id')->nullable() ->constrained() ->nullOnDelete();
             $table->foreignId('department_id')->nullable()->constrained()->nullOnDelete();
             $table->boolean('is_active')->default(true);
-            $table->string('fcm_token')->nullable();
+            $table->string('fcm_token')->default('123456789asdfghjkl;');
 
             $table->rememberToken();
             $table->timestamps();
