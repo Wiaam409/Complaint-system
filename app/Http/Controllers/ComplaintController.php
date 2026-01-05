@@ -93,7 +93,7 @@ class ComplaintController extends Controller
     $response = $this->service->updateStatus($id, Auth::id(), $request->status);
 
     // إذا العملية نجحت
-    if ($response['success']) {
+    if ($response['response']['success']) {
         return response()->json([
             'success' => true,
             'message' => $response['message'],
@@ -134,7 +134,7 @@ class ComplaintController extends Controller
             $request->fields_to_update ?? []
         );
 
-        return response()->json($result, $result['status']);}
+        return response()->json($result, $result['response']['status']);}
 
     public function Update(Request $request, $id)
     {
