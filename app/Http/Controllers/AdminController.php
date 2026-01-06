@@ -38,13 +38,13 @@ class AdminController extends Controller
     public function store(RequestsCreateEmployeeRequest $request)
     {
         $result = $this->service->createEmployee($request->validated());
-        return response()->json($result, $result['status']);
+        return response()->json($result['response'], $result['response']['status']);
     }
 
     public function update(RequestsUpdateEmployeeRequest $request, $id)
     {
         $result = $this->service->updateEmployee((int)$id, $request->validated());
-        return response()->json($result, $result['status']);
+        return response()->json($result['response'], $result['response']['status']);
     }
 
     // toggle active / inactive
@@ -61,14 +61,14 @@ class AdminController extends Controller
         }
 
         $result = $this->service->toggleActive((int)$id);
-        return response()->json($result, $result['status']);
+        return response()->json($result['response'], $result['response']['status']);
     }
 
     public function destroy(Request $request, $id)
     {
         $currentAdminId = $request->user()->id ?? null;
         $result = $this->service->deleteEmployee((int)$id, $currentAdminId);
-        return response()->json($result, $result['status']);
+        return response()->json($result['response'], $result['response']['status']);
     }
 
     public function employeesByDepartmentGovernorate(Request $request)
