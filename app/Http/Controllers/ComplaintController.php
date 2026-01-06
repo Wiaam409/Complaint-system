@@ -84,30 +84,31 @@ class ComplaintController extends Controller
             'Departments fetched successfully'
         );
     }
-  public function updateStatus(Request $request, $id)
+
+
+   public function updateStatus(Request $request, $id)
 {
     $request->validate([
         'status' => 'required|string'
     ]);
 
-    $response = $this->service->updateStatus($id, Auth::id(), $request->status);
+    $response = $this->service->updateStatus(
+        $id,
+        Auth::id(),
+        $request->status
+    );
 
-    // إذا العملية نجحت
-    if ($response['response']['success']) {
-        return response()->json([
-            'success' => true,
-            'message' => $response['message'],
-            'data'    => $response['data']
-        ], $response['status']);
+    if (isset($response['response'])) {
+        $response = $response['response'];
     }
 
-    // إذا العملية فشلت
     return response()->json([
-        'success' => false,
-        'message' => $response['message'],
-        'data'    => null
-    ], $response['status']);
+        'success' => $response['success'] ?? false,
+        'message' => $response['message'] ?? null,
+        'data'    => $response['data'] ?? null
+    ], $response['status'] ?? 500);
 }
+
 
 
     public function employeeComplaints()
