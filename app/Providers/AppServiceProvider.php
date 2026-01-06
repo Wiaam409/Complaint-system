@@ -26,6 +26,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (app()->environment('local') || app()->environment('testing')) {
+            \DB::listen(function ($query) {
+                \Log::channel('jmeter')->debug('Query Executed', [
+                    'sql' => $query->sql,
+                    'bindings' => $query->bindings,
+                    'time' => $query->time
+                ]);
+            });
+        }
     }
 }

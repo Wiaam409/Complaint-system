@@ -13,13 +13,17 @@ Artisan::command('inspire', function () {
 | Scheduled Tasks
 |--------------------------------------------------------------------------
 */
-Artisan::command('inspire', function () {
-    $this->comment('Test scheduler');
-});
 
-app()->booted(function () {
-    app(Schedule::class)
-        ->command('backup:run')
-        ->everyMinute()
-        ->withoutOverlapping();
-});
+
+/*
+|--------------------------------------------------------------------------
+| Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+app(Schedule::class)
+    ->command('backup:run')
+    ->daily()
+    ->at('02:00')
+    ->withoutOverlapping()
+    ->runInBackground();

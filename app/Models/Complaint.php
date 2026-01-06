@@ -21,7 +21,6 @@ class Complaint extends Model
         'is_locked',
         'locked_at',
         'locked_by',
-
     ];
 
     protected $casts = [

@@ -1,0 +1,5 @@
+file_path,file_type,file_size
+./test-files/sample1.jpg,image/jpeg,102400
+./test-files/sample2.png,image/png,51200
+./test-files/sample3.pdf,application/pdf,204800
+./test-files/sample4.jpg,image/jpeg,307200

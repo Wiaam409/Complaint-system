@@ -127,6 +127,13 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'jmeter' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/jmeter/jmeter.log'),
+            'level' => 'debug',
+            'days' => 14,
+        ],
+
     ],
 
 ];

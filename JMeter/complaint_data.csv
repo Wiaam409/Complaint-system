@@ -1,0 +1,21 @@
+title,description,department_id,governorate_id,location
+Power outage in district 5,No electricity since morning,1,2,Damascus District 5
+Water leak on main street,Constant water leakage near park,2,2,Main Street near Central Park
+Garbage not collected,Garbage piled up for 3 days,3,2,Al-Mazzeh Street
+Traffic light malfunction,Traffic light not working at intersection,4,2,8th Avenue & 5th Street
+Suspicious activity,Suspicious persons loitering at night,5,2,Old City District
+Ambulance delay,Emergency response taking too long,6,2,Hospital Road
+Internet connection down,No internet for 2 days,7,2,Digital City Area
+Noise pollution from construction,Construction noise after 10 PM,8,2,New Development Zone
+School playground damaged,Playground equipment broken,9,2,Al-Sham School
+Bus schedule irregular,Buses not arriving on time,10,2,Bus Station Area
+Street light broken,Dark street at night,1,3,Aleppo Downtown
+Sewage blockage,Sewage water flowing on street,2,3,Industrial Area
+Road potholes,Large potholes causing accidents,3,3,Highway Section 5
+Illegal parking,Cars parked in no-parking zone,4,3,Market Street
+Lost property report,Lost wallet in taxi,5,3,Taxi Station
+Medical supplies shortage,No masks at pharmacy,6,3,Medical District
+Phone line dead,Landline not working,7,3,Residential Block 4
+Air pollution from factory,Factory emitting black smoke,8,3,Factory Zone
+School overcrowding,Too many students per class,9,3,Education City
+Taxi overcharging,Taxi drivers charging double,10,3,Tourist Area
