@@ -693,16 +693,19 @@ class ComplaintService
         }
 
         // 🔒 صلاحيات الموظف
-        if (
-            $complaint->governorate_id !== $employee->governorate_id ||
-            $complaint->department_id  !== $employee->department_id
-        ) {
-            return [
-                'success' => false,
-                'status'  => 403,
-                'message' => 'You are not authorized to view this complaint',
-                'data'    => null
-            ];
+        // 🔒 إذا كان Employee فقط نطبق التحقق
+        if ($employee->role === 'employee') {
+            if (
+                $complaint->governorate_id !== $employee->governorate_id ||
+                $complaint->department_id  !== $employee->department_id
+            ) {
+                return [
+                    'success' => false,
+                    'status'  => 403,
+                    'message' => 'You are not authorized to view this complaint',
+                    'data'    => null
+                ];
+            }
         }
 
         return [

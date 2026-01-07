@@ -173,9 +173,9 @@ class ComplaintController extends Controller
 
     public function details(int $id, Request $request)
     {
-        $employee = Auth::user();
+        $user = Auth::user();
 
-        if ($employee->role !== 'employee') {
+        if (!in_array($user->role, ['employee', 'admin', ])) {
             return response()->json([
                 'success' => false,
                 'status'  => 403,
@@ -184,12 +184,10 @@ class ComplaintController extends Controller
             ], 403);
         }
 
-        $result = $this->service->getComplaintForEmployee($id, $employee);
+        $result = $this->service->getComplaintForEmployee($id, $user);
 
         return response()->json($result, $result['status']);
     }
-
-
 
     public function home(Request $request)
     {
