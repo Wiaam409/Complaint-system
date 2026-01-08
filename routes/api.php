@@ -54,7 +54,7 @@ Route::controller(EmailVerificationController::class)->group(function () {
 
 Route::middleware('auth:sanctum', 'role:citizen')->group(function () {
     Route::post('complaints', [ComplaintController::class, 'store']);
-    Route::post('complaints/{id}/update', [ComplaintController::class, 'Update']);
+    Route::post('complaints/update/{id}', [ComplaintController::class, 'Update']);
     Route::post('complaints/{id}/submit', [ComplaintController::class, 'submitUpdatedComplaint']);
     Route::get('citizen/home', [ComplaintController::class, 'home']);
 
@@ -69,7 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('comlaintsdepartment', [ComplaintController::class, 'employeeComplaints']);
     Route::post('complaints/{id}/submit-update', [ComplaintController::class, 'requestUpdate']);
     Route::get('complaints/get', [ComplaintController::class, 'index']);
-    Route::get('details/{id}', [ComplaintController::class, 'details']);
+    Route::get('complaints/{id}', [ComplaintController::class, 'details']);
+        Route::get('complaintsById/{id}', [ComplaintController::class, 'show']);
+
 });
 
 
@@ -80,7 +82,7 @@ Route::get('departmentsbygovernorates', [ComplaintController::class, 'getDepartm
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/fcm-token', [FcmController::class, 'storeToken']);
-    Route::post('/send-test-notification', [FcmController::class, 'sendTestNotification']);
+    Route::post('/send-test-notification/{id}', [FcmController::class, 'sendTestNotification']);
 
 
 

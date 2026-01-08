@@ -24,7 +24,7 @@ class ComplaintRepository
     public function findById(int $id): ?Complaint
     {
         return $this->model
-            ->with(['attachments', 'logs', 'user'])
+            ->with(['attachments', 'logs', 'user','governorate','department'])
             ->find($id);
     }
 

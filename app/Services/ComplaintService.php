@@ -210,16 +210,19 @@ class ComplaintService
         Cache::forget("user_{$userId}_complaints");
     }
 
-    public function getUserComplaints()
-    {
-        $userId = Auth::id();
+ public function getUserComplaints(int $limit = 15)
+{
+    $userId = Auth::id();
+    $page   = request('page', 1);
 
-        return Cache::remember(
-            "user_{$userId}_complaints",
-            $this->cacheTTL,
-            fn() => $this->repo->listByUser($userId)
-        );
-    }
+    $cacheKey = "user_{$userId}_complaints_page_{$page}_limit_{$limit}";
+
+    return Cache::remember(
+        $cacheKey,
+        $this->cacheTTL,
+        fn() => $this->repo->listByUser($userId, $limit)
+    );
+}
 
     public function getComplaintById($id)
     {
