@@ -531,7 +531,7 @@ class ComplaintService
                 $this->sendAfterCommitNotifications($result['notification_data']);
                 return $result['response']; // Return original response
             }
-        );
+        );  
     }
 
     public function submitUpdatedComplaint($complaintId, $userId, $data, $attachments = [])
@@ -774,17 +774,7 @@ class ComplaintService
 
         $list = $complaints
             ->where('status', 'needs_update')
-            ->map(function ($c) {
-                return [
-                    'id'               => $c->id,
-                    'reference_number' => $c->reference_number,
-                    'title'            => $c->title,
-                    'status'           => $c->status,
-                    'governorate'      => $c->governorate?->name,
-                    'department'       => $c->department?->name,
-                    'created_at'       => $c->created_at,
-                ];
-            })
+            
             ->values();
 
         return [
