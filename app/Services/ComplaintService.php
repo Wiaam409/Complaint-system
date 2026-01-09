@@ -210,16 +210,19 @@ class ComplaintService
         Cache::forget("user_{$userId}_complaints");
     }
 
-    public function getUserComplaints()
-    {
-        $userId = Auth::id();
+ public function getUserComplaints(int $limit = 15)
+{
+    $userId = Auth::id();
+    $page   = request('page', 1);
 
-        return Cache::remember(
-            "user_{$userId}_complaints",
-            $this->cacheTTL,
-            fn() => $this->repo->listByUser($userId)
-        );
-    }
+    $cacheKey = "user_{$userId}_complaints_page_{$page}_limit_{$limit}";
+
+    return Cache::remember(
+        $cacheKey,
+        $this->cacheTTL,
+        fn() => $this->repo->listByUser($userId, $limit)
+    );
+}
 
     public function getComplaintById($id)
     {
@@ -538,7 +541,7 @@ class ComplaintService
                     'data'    => $complaint
                 ];
             }
-        );
+        );  
     }
 
 
@@ -783,17 +786,7 @@ class ComplaintService
 
         $list = $complaints
             ->where('status', 'needs_update')
-            ->map(function ($c) {
-                return [
-                    'id'               => $c->id,
-                    'reference_number' => $c->reference_number,
-                    'title'            => $c->title,
-                    'status'           => $c->status,
-                    'governorate'      => $c->governorate?->name,
-                    'department'       => $c->department?->name,
-                    'created_at'       => $c->created_at,
-                ];
-            })
+            
             ->values();
 
         return [
