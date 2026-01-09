@@ -115,53 +115,60 @@ class ComplaintService
     public function create(array $data, $files = [])
     {
         return $this->executeTransaction(
-            // Transaction logic
             function () use ($data, $files) {
                 $user = Auth::user();
 
-            // التأكد أن المحافظة موجودة
-            if (!$this->governorates->find($data['governorate_id'] ?? null)) {
-                abort(422, 'Invalid governorate_id');
+                // التأكد أن المحافظة موجودة
+                if (!$this->governorates->find($data['governorate_id'] ?? null)) {
+                    abort(422, 'Invalid governorate_id');
+                }
+
+                // التأكد أن القسم موجود
+                if (!$this->departments->find($data['department_id'] ?? null)) {
+                    abort(422, 'Invalid department_id');
+                }
+
+                $data['reference_number'] = $this->generateReference();
+                $data['user_id'] = $user->id;
+
+                $complaint = $this->repo->create($data);
+
+                // 🔔 إشعار فايربيز (بالعربي)
+                $this->firebaseService->sendToToken(
+                    $complaint->user->fcm_token,
+                    'تم استلام الشكوى',
+                    'تم استلام شكواك بنجاح وسيتم العمل عليها في أقرب وقت',
+                    [
+                        'reference_number' => $data['reference_number'],
+                        'submitted_at' => now()->toDateTimeString(),
+                    ]
+                );
+
+                // 🔔 إشعار قاعدة البيانات (بالعربي)
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => 'تم استلام الشكوى',
+                    'message' => 'تم استلام شكواك بنجاح وسيتم العمل عليها في أقرب وقت',
+                    'type' => 'new_complaint',
+                    'complaint_id' => $complaint->id,
+                    'metadata' => [
+                        'reference_number' => $data['reference_number'],
+                        'submitted_at' => now()->toDateTimeString(),
+                    ],
+                ]);
+
+                if (!empty($files)) {
+                    $this->saveAttachments($complaint, $files);
+                }
+
+                $this->createLog($complaint->id, $user->id, 'created', 'Complaint created');
+                $this->clearUserComplaintsCache($user->id);
+
+                return $this->repo->findById($complaint->id);
             }
-
-            // التأكد أن القسم موجود
-            if (!$this->departments->find($data['department_id'] ?? null)) {
-                abort(422, 'Invalid department_id');
-            }
-
-            $data['reference_number'] = $this->generateReference();
-            $data['user_id'] = $user->id;
-            $complaint = $this->repo->create($data);
-            $sent = $this->firebaseService->sendToToken(
-                $complaint->user->fcm_token,
-                'New Complaint Submitted',
-                'Your complaint has been received',
-                [
-                    'reference_number' => $data['reference_number'],
-                    'submitted_at' => now()->toDateTimeString(),
-                ]
-            );
-            Notification::create([
-                'user_id' => $user->id,
-                'title' => 'New Complaint Submitted',
-                'message' => 'Your complaint has been received',
-                'type' => 'new_complaint',
-                'complaint_id' => $complaint->id,
-                'metadata' => [
-                    'reference_number' => $data['reference_number'],
-                    'submitted_at' => now()->toDateTimeString(),
-                ],
-            ]);
-            if (!empty($files)) {
-                $this->saveAttachments($complaint, $files);
-            }
-
-            $this->createLog($complaint->id, $user->id, 'created', 'Complaint created');
-            $this->clearUserComplaintsCache($user->id);
-
-            return $this->repo->findById($complaint->id);
-        });
+        );
     }
+
 
     private function generateReference()
     {
@@ -367,22 +374,23 @@ class ComplaintService
 
                 $this->firebaseService->sendToToken(
                     $complaint->user->fcm_token,
-                    'Status Update',
-                    'Your complaint status has been updated to ' . $status,
+                    'تحديث حالة الشكوى',
+                    'تم تحديث حالة شكواك إلى: ' . $this->translateStatus($status),
                     [
-                        'old_status' => $oldStatus,
-                        'new_status' => $status,
+                        'old_status' => (string) $oldStatus,
+                        'new_status' => (string) $status,
                         'updated_at' => now()->toDateTimeString(),
                     ]
                 );
 
+
                 Notification::create([
-                    'user_id'       => $complaint->user->id,
-                    'title'         => 'Status Updated',
-                    'message'       => 'Your complaint status has been updated to ' . $status,
-                    'type'          => 'status_update',
-                    'complaint_id'  => $complaint->id,
-                    'metadata'      => [
+                    'user_id'      => $complaint->user->id,
+                    'title'        => 'تحديث حالة الشكوى',
+                    'message'      => 'تم تحديث حالة شكواك إلى: ' . $this->translateStatus($status),
+                    'type'         => 'status_update',
+                    'complaint_id' => $complaint->id,
+                    'metadata'     => [
                         'old_status' => $oldStatus,
                         'new_status' => $status,
                         'updated_at' => now()->toDateTimeString(),
@@ -397,6 +405,17 @@ class ComplaintService
                 ];
             }
         );
+    }
+    private function translateStatus(string $status): string
+    {
+        return match ($status) {
+            'new'         => 'جديدة',
+            'in_progress' => 'قيد المعالجة',
+            'resolved'    => 'تم الحل',
+            'rejected'    => 'مرفوضة',
+            'needs_update' => 'بحاجة لتحديث',
+            default       => $status,
+        };
     }
 
 
@@ -506,11 +525,11 @@ class ComplaintService
                     'notes'        => "Employee requested update: {$reason}"
                 ]);
 
-               
+
                 $this->firebaseService->sendToToken(
                     $complaint->user->fcm_token,
-                    'Additional Information Required',
-                    'Please update the requested information for your complaint',
+                    'مطلوب معلومات إضافية',
+                    'يرجى تحديث المعلومات المطلوبة لإكمال معالجة الشكوى',
                     [
                         'fields_to_update' => json_encode($fieldsToUpdate),
                         'reason'           => (string) $reason,
@@ -520,19 +539,21 @@ class ComplaintService
                 );
 
 
+
                 Notification::create([
                     'user_id'      => $complaint->user->id,
-                    'title'        => 'Additional Information Required',
-                    'message'      => 'Please update the requested information for your complaint',
+                    'title'        => 'مطلوب معلومات إضافية',
+                    'message'      => 'يرجى تحديث المعلومات المطلوبة لإكمال معالجة الشكوى',
                     'type'         => 'info_request',
                     'complaint_id' => $complaintId,
                     'metadata'     => [
                         'fields_to_update' => $fieldsToUpdate,
                         'reason'           => $reason,
-                        'requested_by'     => $employee->name ?? 'Employee',
+                        'requested_by'     => $employee->name ?? 'الموظف المختص',
                         'requested_at'     => now()->toDateTimeString(),
                     ],
                 ]);
+
 
                 return [
                     'success' => true,
@@ -541,7 +562,7 @@ class ComplaintService
                     'data'    => $complaint
                 ];
             }
-        );  
+        );
     }
 
 
@@ -786,7 +807,7 @@ class ComplaintService
 
         $list = $complaints
             ->where('status', 'needs_update')
-            
+
             ->values();
 
         return [
