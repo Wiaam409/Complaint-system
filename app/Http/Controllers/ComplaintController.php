@@ -135,7 +135,8 @@ class ComplaintController extends Controller
             $request->fields_to_update ?? []
         );
 
-        return response()->json($result, $result['response']['status']);}
+        return response()->json($result, $result['status']);
+    }
 
     public function Update(Request $request, $id)
     {

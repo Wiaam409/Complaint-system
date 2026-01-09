@@ -248,27 +248,29 @@ class ComplaintService
     public function updateStatus($complaintId, $employeeId, $status)
     {
         return $this->executeTransaction(
-            // Transaction logic
             function () use ($complaintId, $employeeId, $status) {
+
                 $complaint = $this->repo->findById($complaintId);
-                $employee = Auth::user();
+                $employee  = Auth::user();
 
                 if (!$complaint) {
                     return [
                         'success' => false,
-                        'status' => 404,
+                        'status'  => 404,
                         'message' => 'Complaint not found',
-                        'data' => null
+                        'data'    => null
                     ];
                 }
 
-                // EMPLOYEE ACCESS CHECK
-                if ($employee->department_id != $complaint->department_id || $employee->governorate_id != $complaint->governorate_id) {
+                if (
+                    $employee->department_id != $complaint->department_id ||
+                    $employee->governorate_id != $complaint->governorate_id
+                ) {
                     return [
                         'success' => false,
-                        'status' => 403,
+                        'status'  => 403,
                         'message' => 'You are not authorized to process this complaint',
-                        'data' => null
+                        'data'    => null
                     ];
                 }
 
@@ -276,20 +278,21 @@ class ComplaintService
                 if (!in_array($status, $allowed)) {
                     return [
                         'success' => false,
-                        'status' => 422,
+                        'status'  => 422,
                         'message' => 'Invalid status value',
-                        'data' => null
+                        'data'    => null
                     ];
                 }
 
-                // LOCK if in_progress
+
                 if ($status === 'in_progress') {
+
                     if ($complaint->is_locked && $complaint->locked_by != $employeeId) {
                         return [
                             'success' => false,
-                            'status' => 403,
+                            'status'  => 403,
                             'message' => 'Complaint is currently locked by another employee',
-                            'data' => null
+                            'data'    => null
                         ];
                     }
 
@@ -302,21 +305,33 @@ class ComplaintService
 
                         ComplaintLog::create([
                             'complaint_id' => $complaintId,
-                            'user_id' => $employeeId,
-                            'action' => 'locked',
-                            'notes' => 'Complaint locked automatically'
+                            'user_id'      => $employeeId,
+                            'action'       => 'locked',
+                            'notes'        => 'Complaint locked automatically'
                         ]);
                     }
                 }
 
-                // UNLOCK if resolved/rejected
+                /* =======================
+               🔓 UNLOCK: resolved / rejected
+            ======================= */
                 if (in_array($status, ['resolved', 'rejected'])) {
+
+                    if (!$complaint->is_locked) {
+                        return [
+                            'success' => false,
+                            'status'  => 409,
+                            'message' => 'Complaint must be in progress before it can be resolved or rejected',
+                            'data'    => null
+                        ];
+                    }
+
                     if ($complaint->locked_by != $employeeId) {
                         return [
                             'success' => false,
-                            'status' => 403,
-                            'message' => 'Cannot complete, complaint locked by another employee',
-                            'data' => null
+                            'status'  => 403,
+                            'message' => 'Complaint is locked by another employee',
+                            'data'    => null
                         ];
                     }
 
@@ -328,65 +343,60 @@ class ComplaintService
 
                     ComplaintLog::create([
                         'complaint_id' => $complaintId,
-                        'user_id' => $employeeId,
-                        'action' => 'unlocked',
-                        'notes' => 'Complaint unlocked automatically after completion'
+                        'user_id'      => $employeeId,
+                        'action'       => 'unlocked',
+                        'notes'        => 'Complaint unlocked automatically after completion'
                     ]);
                 }
 
-                $old_status = $complaint->status;
+                $oldStatus = $complaint->status;
 
                 // UPDATE STATUS
                 $complaint->update(['status' => $status]);
 
                 ComplaintLog::create([
                     'complaint_id' => $complaintId,
-                    'user_id' => $employeeId,
-                    'action' => 'status_changed',
-                    'notes' => "Status changed to: {$status}"
+                    'user_id'      => $employeeId,
+                    'action'       => 'status_changed',
+                    'notes'        => "Status changed to: {$status}"
                 ]);
 
-                // Return result with notification data for after-commit
-                return [
-                    'response' => [
-                        'success' => true,
-                        'status' => 200,
-                        'message' => 'Status updated successfully',
-                        'data' => $complaint
-                    ],
-                    'notification_data' => [
-                        'firebase' => [
-                            'token' => $complaint->user->fcm_token,
-                            'title' => 'Status Update',
-                            'message' => 'Your complaint status has been updated to ' . $status,
-                            'data' => [
-                                'old_status' => $old_status,
-                                'new_status' => $status,
-                                'updated_at' => now()->toDateTimeString(),
-                            ],
-                        ],
-                        'database' => [
-                            'user_id' => $complaint->user->id,
-                            'title' => 'Status Updated',
-                            'message' => 'Your complaint status has been updated to ' . $status,
-                            'type' => 'status_update',
-                            'complaint_id' => $complaint->id,
-                            'metadata' => [
-                                'old_status' => $old_status,
-                                'new_status' => $status,
-                                'updated_at' => now()->toDateTimeString(),
-                            ],
-                        ]
+
+                $this->firebaseService->sendToToken(
+                    $complaint->user->fcm_token,
+                    'Status Update',
+                    'Your complaint status has been updated to ' . $status,
+                    [
+                        'old_status' => $oldStatus,
+                        'new_status' => $status,
+                        'updated_at' => now()->toDateTimeString(),
                     ]
+                );
+
+                Notification::create([
+                    'user_id'       => $complaint->user->id,
+                    'title'         => 'Status Updated',
+                    'message'       => 'Your complaint status has been updated to ' . $status,
+                    'type'          => 'status_update',
+                    'complaint_id'  => $complaint->id,
+                    'metadata'      => [
+                        'old_status' => $oldStatus,
+                        'new_status' => $status,
+                        'updated_at' => now()->toDateTimeString(),
+                    ],
+                ]);
+
+                return [
+                    'success' => true,
+                    'status'  => 200,
+                    'message' => 'Status updated successfully',
+                    'data'    => $complaint
                 ];
-            },
-            // After-commit action
-            function ($result) {
-                $this->sendAfterCommitNotifications($result['notification_data']);
-                return $result['response']; // Return original response
             }
         );
     }
+
+
 
     public function getEmployeeComplaints()
     {
@@ -415,75 +425,75 @@ class ComplaintService
     public function requestUpdateFromEmployee($complaintId, $employeeId, $reason, $fieldsToUpdate = [])
     {
         return $this->executeTransaction(
-            // Transaction logic
             function () use ($complaintId, $employeeId, $reason, $fieldsToUpdate) {
+
                 $complaint = $this->repo->findById($complaintId);
+                $employee  = Auth::user();
 
                 if (!$complaint) {
                     return [
                         'success' => false,
-                        'status' => 404,
-                        'message' => "Complaint not found",
-                        'data' => null
+                        'status'  => 404,
+                        'message' => 'Complaint not found',
+                        'data'    => null
                     ];
                 }
-
-                $employee = Auth::user();
 
                 if ($employee->role !== 'employee') {
                     return [
                         'success' => false,
-                        'status' => 403,
-                        'message' => "Only employees can request updates",
-                        'data' => null
+                        'status'  => 403,
+                        'message' => 'Only employees can request updates',
+                        'data'    => null
                     ];
                 }
 
                 if ($employee->department_id != $complaint->department_id) {
                     return [
                         'success' => false,
-                        'status' => 403,
+                        'status'  => 403,
                         'message' => "You do not belong to this complaint's department",
-                        'data' => null
+                        'data'    => null
                     ];
                 }
 
                 if ($employee->governorate_id != $complaint->governorate_id) {
                     return [
                         'success' => false,
-                        'status' => 403,
-                        'message' => "You do not have access to this governorate",
-                        'data' => null
+                        'status'  => 403,
+                        'message' => 'You do not have access to this governorate',
+                        'data'    => null
                     ];
                 }
 
                 if ($complaint->status !== 'in_progress') {
                     return [
                         'success' => false,
-                        'status' => 409,
-                        'message' => "Complaint must be in progress to request modification",
-                        'data' => null
+                        'status'  => 409,
+                        'message' => 'Complaint must be in progress to request modification',
+                        'data'    => null
                     ];
                 }
 
                 if ($complaint->locked_by != $employeeId) {
                     return [
                         'success' => false,
-                        'status' => 403,
-                        'message' => "Complaint is locked by another employee",
-                        'data' => null
+                        'status'  => 403,
+                        'message' => 'Complaint is locked by another employee',
+                        'data'    => null
                     ];
                 }
 
+                // UPDATE COMPLAINT
                 $complaint->update([
-                    'status' => 'needs_update',
+                    'status'    => 'needs_update',
                     'is_locked' => false,
                     'locked_at' => null,
                     'locked_by' => null,
-                    'meta' => json_encode([
-                        'update_reason' => $reason,
+                    'meta'      => [
+                        'update_reason'    => $reason,
                         'fields_to_update' => $fieldsToUpdate
-                    ])
+                    ]
                 ]);
 
                 ComplaintLog::create([
@@ -493,43 +503,45 @@ class ComplaintService
                     'notes'        => "Employee requested update: {$reason}"
                 ]);
 
-                // Return result with notification data for after-commit
-                return [
-                    'response' => [
-                        'success' => true,
-                        'status' => 200,
-                        'message' => 'Update request sent successfully',
-                        'data' => $complaint
-                    ],
-                    'notification_data' => [
-                        'firebase' => [
-                            'token' => $complaint->user->fcm_token,
-                            'title' => 'Fields update required',
-                            'message' => 'You have to update the required fields',
-                            'data' => ['fields_to_update' => $fieldsToUpdate]
-                        ],
-                        'database' => [
-                            'user_id' => $complaint->user->id,
-                            'title' => 'Additional Information Required',
-                            'message' => 'We need more information about your complaint',
-                            'type' => 'info_request',
-                            'complaint_id' => $complaintId,
-                            'metadata' => [
-                                'requested_info' => $fieldsToUpdate,
-                                'requested_by' => 'Officer Name',
-                                'reason' => $reason,
-                            ],
-                        ]
+               
+                $this->firebaseService->sendToToken(
+                    $complaint->user->fcm_token,
+                    'Additional Information Required',
+                    'Please update the requested information for your complaint',
+                    [
+                        'fields_to_update' => json_encode($fieldsToUpdate),
+                        'reason'           => (string) $reason,
+                        'updated_at'       => now()->toDateTimeString(),
+                        'complaint_id'     => (string) $complaintId,
                     ]
+                );
+
+
+                Notification::create([
+                    'user_id'      => $complaint->user->id,
+                    'title'        => 'Additional Information Required',
+                    'message'      => 'Please update the requested information for your complaint',
+                    'type'         => 'info_request',
+                    'complaint_id' => $complaintId,
+                    'metadata'     => [
+                        'fields_to_update' => $fieldsToUpdate,
+                        'reason'           => $reason,
+                        'requested_by'     => $employee->name ?? 'Employee',
+                        'requested_at'     => now()->toDateTimeString(),
+                    ],
+                ]);
+
+                return [
+                    'success' => true,
+                    'status'  => 200,
+                    'message' => 'Update request sent successfully',
+                    'data'    => $complaint
                 ];
-            },
-            // After-commit action
-            function ($result) {
-                $this->sendAfterCommitNotifications($result['notification_data']);
-                return $result['response']; // Return original response
             }
         );
     }
+
+
 
     public function submitUpdatedComplaint($complaintId, $userId, $data, $attachments = [])
     {
