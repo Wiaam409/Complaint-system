@@ -841,7 +841,7 @@ class ComplaintService
     }
 
 
-    
+
 
     public function changeComplaintDepartment(int $complaintId, int $newDepartmentId): array
     {
@@ -937,6 +937,38 @@ class ComplaintService
             'user_id'      => $employee->id,
             'action'       => 'department_changed',
             'notes'        => "Department changed from {$oldDepartment} to {$newDepartmentId}"
+        ]);
+
+        /* =====================================================
+       🔔 NOTIFICATIONS (Arabic)
+    ===================================================== */
+
+        // Firebase notification
+        $this->firebaseService->sendToToken(
+            $complaint->user->fcm_token,
+            'تحويل الشكوى',
+            'تم تحويل شكواك إلى قسم مختص آخر لمتابعتها',
+            [
+                'complaint_id'   => (string) $complaint->id,
+                'old_department' => (string) $oldDepartment,
+                'new_department' => (string) $newDepartmentId,
+                'updated_at'     => now()->toDateTimeString(),
+            ]
+        );
+
+        // Database notification
+        Notification::create([
+            'user_id'      => $complaint->user->id,
+            'title'        => 'تحويل الشكوى',
+            'message'      => 'تم تحويل شكواك إلى قسم مختص آخر لمتابعتها',
+            'type'         => 'general',
+            'complaint_id' => $complaint->id,
+            'metadata'     => [
+                'old_department' => $oldDepartment,
+                'new_department' => $newDepartmentId,
+                'transferred_by' => $employee->name ?? 'موظف',
+                'transferred_at' => now()->toDateTimeString(),
+            ],
         ]);
 
         return [
