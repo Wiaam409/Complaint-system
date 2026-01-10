@@ -10,9 +10,11 @@ use App\Http\Requests\CreateEmployeeRequest as RequestsCreateEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest as RequestsUpdateEmployeeRequest;
 use App\Models\Department;
 use App\Models\Governorate;
+use App\Models\User;
 use App\Services\AdminService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -169,4 +171,21 @@ class AdminController extends Controller
 
         return $pdf->download('complaints-report.pdf');
     }
+
+    
+    public function changeDepartment(Request $request, User $employee)
+    {
+        $request->validate([
+            'department_id' => 'required|integer|exists:departments,id',
+        ]);
+
+        $result = $this->service->changeEmployeeDepartment(
+            Auth::user(),
+            $employee,
+            $request->department_id
+        );
+
+        return response()->json($result, $result['status']);
+    }
+
 }

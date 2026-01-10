@@ -73,7 +73,15 @@ class User extends Authenticatable
     {
         return $this->hasMany(ComplaintLog::class);
     }
+    public function isEmployee(): bool
+    {
+        return $this->role === 'employee';
+    }
 
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 
 
 

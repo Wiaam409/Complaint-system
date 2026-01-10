@@ -99,5 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('system/logs/stats', [AdminController::class, 'stats']);
 
         Route::get('admin/pdf', [AdminController::class, 'exportComplaintsPdf']);
+
+     Route::put('admin/employees/{employee}/change-department',[AdminController::class, 'changeDepartment']);
     });
 });

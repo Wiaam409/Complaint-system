@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Complaint;
 use App\Models\ComplaintLog;
+use App\Models\Department;
 use App\Models\system_logs;
 use App\Models\SystemLog;
 use App\Models\User;
@@ -25,15 +26,15 @@ class AdminService
     protected function executeTransaction(callable $transaction, callable $afterCommit = null)
     {
         $lastException = null;
-        
+
         for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
             try {
                 DB::beginTransaction();
-                
+
                 $result = $transaction();
-                
+
                 DB::commit();
-                
+
                 // Execute after-commit actions if provided
                 if ($afterCommit && is_callable($afterCommit)) {
                     try {
@@ -43,13 +44,13 @@ class AdminService
                         Log::error('After-commit action failed: ' . $e->getMessage());
                     }
                 }
-                
+
                 return $result;
-                
+
             } catch (\Exception $e) {
                 DB::rollBack();
                 $lastException = $e;
-                
+
                 // Log the retry attempt
                 if ($attempt < $this->maxRetries) {
                     Log::warning("Transaction attempt {$attempt} failed, retrying: " . $e->getMessage());
@@ -57,7 +58,7 @@ class AdminService
                 }
             }
         }
-        
+
         // If we get here, all retries failed
         throw $lastException;
     }
@@ -102,7 +103,7 @@ class AdminService
             'data'    => $formatted
         ];
     }
-    
+
     public function createEmployee(array $data): array
     {
         return $this->executeTransaction(
@@ -119,7 +120,7 @@ class AdminService
                     'is_active'      => true,
                     'email_verified_at' => now(),
                 ]);
-                
+
                 $employee->assignRole('employee');
 
                 // Return result with after-commit data if needed
@@ -145,7 +146,7 @@ class AdminService
                     'email' => $result['after_commit_data']['employee_email'],
                     'created_at' => $result['after_commit_data']['created_at']
                 ]);
-                
+
                 return $result['response']; // Return original response
             }
         );
@@ -221,7 +222,7 @@ class AdminService
                         'updated_at' => $result['after_commit_data']['updated_at']
                     ]);
                 }
-                
+
                 return $result['response']; // Return original response
             }
         );
@@ -292,7 +293,7 @@ class AdminService
                         'changed_at' => $result['after_commit_data']['changed_at']
                     ]);
                 }
-                
+
                 return $result['response']; // Return original response
             }
         );
@@ -315,7 +316,7 @@ class AdminService
                         ]
                     ];
                 }
-                
+
                 if ($employee->role === 'employee') {
                     $hasInProgressComplaints = $employee->handledComplaints()
                         ->where('status', 'in_progress')
@@ -378,7 +379,7 @@ class AdminService
                         'deleted_at' => $result['after_commit_data']['deleted_at']
                     ]);
                 }
-                
+
                 return $result['response']; // Return original response
             }
         );
@@ -466,7 +467,7 @@ class AdminService
             'updated_at'    => $e->updated_at,
         ];
     }
-    
+
     public function complaintsSummary(string $from, string $to, ?int $governorateId = null, ?int $departmentId = null): array
     {
         $start = Carbon::parse($from)->startOfDay();
@@ -575,6 +576,77 @@ class AdminService
                 'min_execution_ms' => $minTime,
                 'max_execution_ms' => $maxTime,
                 'top_endpoints'    => $topEndpoints,
+            ]
+        ];
+    }
+
+    
+
+    public function changeEmployeeDepartment(User $admin, User $employee, int $departmentId): array
+    {
+        // ✅ Admin only
+        if ($admin->role !== 'admin') {
+            return [
+                'success' => false,
+                'status'  => 403,
+                'message' => 'Only admin can change employee department',
+                'data'    => null
+            ];
+        }
+
+        // ✅ Target must be employee
+        if (!$employee->isEmployee()) {
+            return [
+                'success' => false,
+                'status'  => 422,
+                'message' => 'Target user is not an employee',
+                'data'    => null
+            ];
+        }
+
+        // ✅ Department exists
+        $department = Department::find($departmentId);
+
+        if (!$department) {
+            return [
+                'success' => false,
+                'status'  => 404,
+                'message' => 'Department not found',
+                'data'    => null
+            ];
+        }
+
+        // ✅ MANY-TO-MANY governorate check
+        // هل هذا القسم مرتبط بمحافظة الموظف؟
+        $belongsToGovernorate = $department
+            ->governorates()
+            ->where('governorate_id', $employee->governorate_id)
+            ->exists();
+
+        if (!$belongsToGovernorate) {
+            return [
+                'success' => false,
+                'status'  => 409,
+                'message' => 'Department must belong to the same governorate',
+                'data'    => null
+            ];
+        }
+
+        // 🔄 Update department
+        $oldDepartment = $employee->department_id;
+
+        $employee->update([
+            'department_id' => $departmentId
+        ]);
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Employee department updated successfully',
+            'data'    => [
+                'employee_id'    => $employee->id,
+                'old_department' => $oldDepartment,
+                'new_department' => $departmentId,
             ]
         ];
     }
