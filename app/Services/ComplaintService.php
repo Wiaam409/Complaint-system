@@ -759,7 +759,18 @@ class ComplaintService
             'reference_number' => $c->reference_number,
             'title' => $c->title,
             'description' => $c->description,
-            'status' => $c->status,
+
+            'status'     => $c->status,
+            'is_locked'  => (bool) $c->is_locked,
+            'locked_at'  => $c->locked_at?->format('Y-m-d H:i'),
+
+            'locked_by' => $c->lockedBy
+                ? [
+                    'id'    => $c->lockedBy->id,
+                    'name'  => $c->lockedBy->name,
+                    'email' => $c->lockedBy->email,
+                ]
+                : null,
 
             'citizen' => [
                 'name'  => $c->user->name,
@@ -785,6 +796,8 @@ class ComplaintService
             'created_at' => $c->created_at->format('Y-m-d H:i'),
         ];
     }
+
+
 
     public function home(): array
     {
