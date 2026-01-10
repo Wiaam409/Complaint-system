@@ -206,6 +206,17 @@ class ComplaintController extends Controller
         $result = $this->service->home();
         return response()->json($result, $result['status']);
     }
+    public function changeDepartment(Request $request, int $complaintId)
+    {
+        $request->validate([
+            'department_id' => 'required|integer'
+        ]);
 
+        $result = $this->service->changeComplaintDepartment(
+            $complaintId,
+            $request->department_id
+        );
 
+        return response()->json($result, $result['status']);
+    }
 }

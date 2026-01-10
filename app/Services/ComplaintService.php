@@ -10,6 +10,7 @@ use App\Repositories\DepartmentRepository;
 
 use App\Models\ComplaintAttachment;
 use App\Models\ComplaintLog;
+use App\Models\Department;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -835,6 +836,117 @@ class ComplaintService
                 ],
                 'summary'    => $summary,
                 'complaints needs update' => $list,
+            ]
+        ];
+    }
+
+
+    
+
+    public function changeComplaintDepartment(int $complaintId, int $newDepartmentId): array
+    {
+        $employee = Auth::user();
+
+        // ✅ employee only
+        if ($employee->role !== 'employee') {
+            return [
+                'success' => false,
+                'status'  => 403,
+                'message' => 'Only employees can change complaint department',
+                'data'    => null
+            ];
+        }
+
+        $complaint = Complaint::find($complaintId);
+
+        if (!$complaint) {
+            return [
+                'success' => false,
+                'status'  => 404,
+                'message' => 'Complaint not found',
+                'data'    => null
+            ];
+        }
+
+        // ✅ complaint must be NEW
+        if ($complaint->status !== 'new') {
+            return [
+                'success' => false,
+                'status'  => 409,
+                'message' => 'Only new complaints can be transferred to another department',
+                'data'    => null
+            ];
+        }
+
+        // 🔓 must NOT be locked
+        if ($complaint->is_locked || $complaint->locked_by !== null) {
+            return [
+                'success' => false,
+                'status'  => 409,
+                'message' => 'Complaint is locked and cannot be transferred',
+                'data'    => null
+            ];
+        }
+
+        // ✅ same governorate
+        if ($complaint->governorate_id !== $employee->governorate_id) {
+            return [
+                'success' => false,
+                'status'  => 403,
+                'message' => 'You do not have access to this governorate',
+                'data'    => null
+            ];
+        }
+
+        $department = Department::find($newDepartmentId);
+
+        if (!$department) {
+            return [
+                'success' => false,
+                'status'  => 404,
+                'message' => 'Target department not found',
+                'data'    => null
+            ];
+        }
+
+        // ✅ many-to-many governorate check
+        $belongsToGovernorate = $department
+            ->governorates()
+            ->where('governorate_id', $complaint->governorate_id)
+            ->exists();
+
+        if (!$belongsToGovernorate) {
+            return [
+                'success' => false,
+                'status'  => 409,
+                'message' => 'Department must belong to the same governorate',
+                'data'    => null
+            ];
+        }
+
+        $oldDepartment = $complaint->department_id;
+
+        // 🔄 update department
+        $complaint->update([
+            'department_id' => $newDepartmentId
+        ]);
+
+        // 📝 log
+        ComplaintLog::create([
+            'complaint_id' => $complaint->id,
+            'user_id'      => $employee->id,
+            'action'       => 'department_changed',
+            'notes'        => "Department changed from {$oldDepartment} to {$newDepartmentId}"
+        ]);
+
+        return [
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Complaint department updated successfully',
+            'data'    => [
+                'complaint_id'   => $complaint->id,
+                'old_department' => $oldDepartment,
+                'new_department' => $newDepartmentId,
             ]
         ];
     }

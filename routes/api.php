@@ -71,7 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('complaints/get', [ComplaintController::class, 'index']);
     Route::get('complaints/{id}', [ComplaintController::class, 'details']);
         Route::get('complaintsById/{id}', [ComplaintController::class, 'show']);
-
+        Route::patch('complaints/{id}/change-department',[ComplaintController::class, 'changeDepartment']);
 });
 
 
